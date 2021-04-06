@@ -21,6 +21,7 @@ require (
 	github.com/hashicorp/terraform v0.14.4
 	github.com/hashicorp/terraform-svchost v0.0.0-20200729002733-f050f53b9734
 	github.com/iancoleman/strcase v0.1.3
+	github.com/infracloudio/mapper v0.0.0-20210415140743-9501696352c2
 	github.com/itchyny/gojq v0.12.1
 	github.com/mattn/go-isatty v0.0.12
 	github.com/mattn/go-sqlite3 v1.12.0
@@ -35,7 +36,7 @@ require (
 	github.com/zclconf/go-cty v1.7.1
 	go.uber.org/zap v1.16.0
 	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/sys v0.0.0-20210415045647-66c3f260301c
+	golang.org/x/sys v0.0.0-20210320140829-1e4c9ba3b0c4
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	helm.sh/helm/v3 v3.4.0
