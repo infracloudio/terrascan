@@ -30,27 +30,33 @@ func TestLoadIacDir(t *testing.T) {
 	table := []struct {
 		name    string
 		dirPath string
-		armv1     ARMV1
+		armv1   ARMV1
 		want    output.AllResourceConfigs
 		wantErr error
 	}{
 		{
 			name:    "empty config",
 			dirPath: "./testdata/testfile",
-			armv1:     ARMV1{},
+			armv1:   ARMV1{},
 			wantErr: fmt.Errorf("no directories found for path ./testdata/testfile"),
 		},
 		{
 			name:    "load invalid config dir",
 			dirPath: "./testdata",
-			armv1:     ARMV1{},
+			armv1:   ARMV1{},
 			wantErr: nil,
 		},
 		{
 			name:    "invalid dirPath",
 			dirPath: "not-there",
-			armv1:    ARMV1{},
+			armv1:   ARMV1{},
 			wantErr: &os.PathError{Err: syscall.ENOENT, Op: "lstat", Path: "not-there"},
+		},
+		{
+			name:    "key-vault",
+			dirPath: "./testdata/key-vault",
+			armv1:   ARMV1{},
+			wantErr: nil,
 		},
 	}
 
@@ -62,5 +68,4 @@ func TestLoadIacDir(t *testing.T) {
 			}
 		})
 	}
-
 }

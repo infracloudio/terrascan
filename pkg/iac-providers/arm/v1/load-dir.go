@@ -17,7 +17,12 @@
 package armv1
 
 import (
+	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -37,7 +42,21 @@ func (a *ARMV1) LoadIacDir(absRootDir string) (output.AllResourceConfigs, error)
 
 	for fileDir, files := range fileMap {
 		for i := range files {
+			// continue if file is a *.parameters.json or metadata.json
+			if isParametersFile(*files[i]) || isMetadataFile(*files[i]) {
+				continue
+			}
+
 			file := filepath.Join(fileDir, *files[i])
+
+			// validate if the ARM template has a supporting valid
+			// *.parameters.json file or not
+			if !a.hasValidParametersFile(i, fileDir, files) {
+				zap.S().Debug("error while loading iac files",
+					zap.String("IAC file", file),
+					zap.Error(errors.New("does not have required valid parameters file")))
+				continue
+			}
 
 			var configData output.AllResourceConfigs
 			if configData, err = a.LoadIacFile(file); err != nil {
@@ -52,4 +71,48 @@ func (a *ARMV1) LoadIacDir(absRootDir string) (output.AllResourceConfigs, error)
 	}
 
 	return allResourcesConfig, nil
+}
+
+func isParametersFile(file string) bool {
+	return strings.Contains(file, "parameters.json")
+}
+
+func isMetadataFile(file string) bool {
+	return strings.Contains(file, "metadata.json")
+}
+
+func (a *ARMV1) hasValidParametersFile(i int, fileDir string, files []*string) bool {
+	f := strings.TrimSuffix(*files[i], filepath.Ext(*files[i]))
+	for n := range files {
+		if n == i {
+			continue
+		}
+
+		if strings.EqualFold(*files[n], f+".parameters.json") {
+			file := filepath.Join(fileDir, *files[n])
+			f, err := os.Open(file)
+			if err != nil {
+				zap.S().Debug("error while loading iac files", zap.String("IAC file", file), zap.Error(err))
+				return false
+			}
+			defer f.Close()
+
+			data, err := ioutil.ReadAll(f)
+			if err != nil {
+				zap.S().Debug("error while loading iac files", zap.String("IAC file", file), zap.Error(err))
+				return false
+			}
+
+			var params map[string]interface{}
+			err = json.Unmarshal(data, &params)
+			if err != nil {
+				zap.S().Debug("error while loading iac files", zap.String("IAC file", file), zap.Error(err))
+				return false
+			}
+			a.templateParameters = params
+			return true
+		}
+	}
+
+	return false
 }
