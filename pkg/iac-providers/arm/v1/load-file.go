@@ -18,20 +18,16 @@ package armv1
 
 import (
 	"fmt"
-	"github.com/infracloudio/mapper"
-	"strings"
-
-	"go.uber.org/zap"
-
 	"github.com/accurics/terrascan/pkg/iac-providers/output"
 	"github.com/accurics/terrascan/pkg/utils"
+	"github.com/infracloudio/mapper"
+	"go.uber.org/zap"
+	"strings"
 )
 
 // LoadIacFile loads the specified ARM template file.
 // Note that a single ARM template json file may contain multiple resource definitions.
 func (a *ARMV1) LoadIacFile(absFilePath string) (allResourcesConfig output.AllResourceConfigs, err error) {
-	allResourcesConfig = make(map[string][]output.ResourceConfig)
-
 	var iacDocuments []*utils.IacDocument
 
 	fileExt := a.getFileType(absFilePath)
@@ -42,27 +38,17 @@ func (a *ARMV1) LoadIacFile(absFilePath string) (allResourcesConfig output.AllRe
 		zap.S().Debug("unknown extension found", zap.String("extension", fileExt))
 		return allResourcesConfig, fmt.Errorf("unknown file extension for file %s", absFilePath)
 	}
+
 	if err != nil {
 		zap.S().Debug("failed to load file", zap.String("file", absFilePath))
 		return allResourcesConfig, err
 	}
-
-	for _, doc := range iacDocuments {
-		var config *output.ResourceConfig = &output.ResourceConfig{}
-
-		// TODO: make required calls to mapper API
-		m := mapper.NewMapper("arm")
-		err := m.Validate(doc.Data)
-
-		if err != nil {
-			zap.S().Debug("unable to normalize data", zap.Error(err), zap.String("file", absFilePath))
-			continue
-		}
-
-		config.Line = doc.StartLine
-		config.Source = absFilePath
-
-		allResourcesConfig[config.Type] = append(allResourcesConfig[config.Type], *config)
+	doc := iacDocuments[0]
+	m := mapper.NewMapper("arm")
+	allResourcesConfig, err = m.Map(doc, a.templateParameters)
+	if err != nil {
+		zap.S().Debug("unable to normalize data", zap.Error(err), zap.String("file", absFilePath))
+		return allResourcesConfig, err
 	}
 	return allResourcesConfig, nil
 }

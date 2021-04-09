@@ -17,7 +17,9 @@
 package armv1
 
 // ARMV1 struct implements the IacProvider interface
-type ARMV1 struct{}
+type ARMV1 struct {
+	templateParameters map[string]interface{}
+}
 
 const (
 	// JSONExtension json
