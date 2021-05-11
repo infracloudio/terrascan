@@ -9,12 +9,14 @@ replace (
 )
 
 require (
+	github.com/VerbalExpressions/GoVerbalExpressions v0.0.0-20200410162751-4d76a1099a6e
 	github.com/ghodss/yaml v1.0.0
+	github.com/google/uuid v1.2.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-getter v1.5.1
-	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/go-retryablehttp v0.6.6
 	github.com/hashicorp/go-version v1.2.1
 	github.com/hashicorp/hcl v1.0.0
@@ -34,6 +36,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.5.1
 	github.com/spf13/cobra v1.1.1
+	github.com/stretchr/testify v1.7.0
 	github.com/zclconf/go-cty v1.8.2
 	go.uber.org/zap v1.16.0
 	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea
