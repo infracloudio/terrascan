@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2021 Accurics, Inc.
+    Copyright (C) 2020 Accurics, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -14,21 +14,37 @@
     limitations under the License.
 */
 
-package mapper
+package types
 
 import (
-	"github.com/accurics/terrascan/pkg/mapper/core"
-	"github.com/accurics/terrascan/pkg/mapper/iac-providers/arm"
-	"github.com/accurics/terrascan/pkg/mapper/iac-providers/cft"
+	"encoding/json"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
-// NewMapper returns a mapper based on IaC provider.
-func NewMapper(iacType string) core.Mapper {
-	switch iacType {
-	case "cft":
-		return cft.Mapper()
-	case "arm":
-		return arm.Mapper()
+func TestIfTemplateStructIsInlineWithARMTemplate(t *testing.T) {
+	data, err := readTemplate("storage-account-create.json")
+	if err != nil {
+		t.Error(err)
 	}
-	return nil
+
+	var tmp Template
+	err = json.Unmarshal(data, &tmp)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func readTemplate(name string) ([]byte, error) {
+	const testData = "test_data"
+
+	f, err := os.Open(filepath.Join(testData, name))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return ioutil.ReadAll(f)
 }
