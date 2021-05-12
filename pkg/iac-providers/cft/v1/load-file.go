@@ -18,6 +18,7 @@ package cftv1
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	"github.com/accurics/terrascan/pkg/iac-providers/output"
@@ -48,6 +49,20 @@ func (a *CFTV1) LoadIacFile(absFilePath string) (allResourcesConfig output.AllRe
 	}
 	allResourcesConfig = make(map[string][]output.ResourceConfig)
 	for _, doc := range iacDocuments {
+
+		// replacing yaml data as the default yaml.v3 removes
+		// intrinsic tags for cloudformation templates
+		// (!Ref, !Fn::<> etc are removed and resolved to a string
+		// which disables parameter resolution by goformation)
+		if fileExt != JSONExtension {
+			templateData, err := ioutil.ReadFile(absFilePath)
+			if err != nil {
+				zap.S().Debug("unable to read template data", zap.Error(err), zap.String("file", absFilePath))
+				return allResourcesConfig, err
+			}
+			doc.Data = templateData
+		}
+
 		var config *output.ResourceConfig
 		m := mapper.NewMapper("cft")
 		arc, err := m.Map(doc)
