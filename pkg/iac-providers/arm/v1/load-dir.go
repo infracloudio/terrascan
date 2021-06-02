@@ -18,7 +18,6 @@ package armv1
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -45,20 +44,16 @@ func (a *ARMV1) LoadIacDir(absRootDir string, nonRecursive bool) (output.AllReso
 	for fileDir, files := range fileMap {
 		for i := range files {
 			// continue if file is a *.parameters.json or metadata.json
-			if isParametersFile(*files[i]) || isMetadataFile(*files[i]) {
+			if files[i] != nil && isParametersFile(*files[i]) || isMetadataFile(*files[i]) {
 				continue
 			}
 
 			file := filepath.Join(fileDir, *files[i])
 
-			// validate if the ARM template has a supporting valid
-			// *.parameters.json file or not
-			if !a.hasValidParametersFile(i, fileDir, files) {
-				zap.S().Debug(errFileLoad,
-					zap.String(iacFile, file),
-					zap.Error(errors.New("does not have required valid parameters file")))
-				continue
-			}
+			// check if the template has a supporting .parameters.json file or not
+			// yes: extract parameter values; no: continue with the default values set in the template
+			a.templateParameters = make(map[string]interface{})
+			a.tryGetParameters(*files[i], fileDir, files)
 
 			var configData output.AllResourceConfigs
 			if configData, err = a.LoadIacFile(file); err != nil {
@@ -76,71 +71,61 @@ func (a *ARMV1) LoadIacDir(absRootDir string, nonRecursive bool) (output.AllReso
 }
 
 func isParametersFile(file string) bool {
-	return strings.Contains(file, "parameters.json")
+	return strings.Contains(file, ParametersFileExtension)
 }
 
 func isMetadataFile(file string) bool {
-	return strings.Contains(file, "metadata.json")
+	return strings.Contains(file, MetadataFileExtension)
 }
 
 const errFileLoad = "error while loading iac files"
 
-func (a *ARMV1) hasValidParametersFile(i int, fileDir string, files []*string) bool {
-	f := strings.TrimSuffix(*files[i], filepath.Ext(*files[i]))
-	for n := range files {
-		if n == i {
-			continue
-		}
+func (a *ARMV1) tryGetParameters(fileName string, fileDir string, files []*string) {
+	pf := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ParametersFileExtension
 
-		if strings.EqualFold(*files[n], f+".parameters.json") {
-			file := filepath.Join(fileDir, *files[n])
-			f, err := os.Open(file)
-			if err != nil {
-				zap.S().Debug(errFileLoad, zap.String(iacFile, file), zap.Error(err))
-				return false
-			}
-			defer f.Close()
-
-			data, err := ioutil.ReadAll(f)
-			if err != nil {
-				zap.S().Debug(errFileLoad, zap.String(iacFile, file), zap.Error(err))
-				return false
-			}
-
-			var params map[string]interface{}
-			err = json.Unmarshal(data, &params)
-			if err != nil {
-				zap.S().Debug(errFileLoad, zap.String(iacFile, file), zap.Error(err))
-				return false
-			}
-			npm, err := extractParameterValues(params)
-			if err != nil {
-				zap.S().Debug("error extracting parameter values", zap.String(iacFile, file), zap.Error(err))
-				return false
-			}
-			a.templateParameters = npm
-			return true
-		}
+	file := filepath.Join(fileDir, pf)
+	f, err := os.Open(file)
+	if err != nil {
+		zap.S().Debug(errFileLoad, zap.String(iacFile, file), zap.Error(err))
+		return
 	}
-	return false
+	defer f.Close()
+
+	data, err := ioutil.ReadAll(f)
+	if err != nil {
+		zap.S().Debug(errFileLoad, zap.String(iacFile, file), zap.Error(err))
+		return
+	}
+
+	var params map[string]interface{}
+	err = json.Unmarshal(data, &params)
+	if err != nil {
+		zap.S().Debug(errFileLoad, zap.String(iacFile, file), zap.Error(err))
+		return
+	}
+
+	err = a.extractParameterValues(params)
+	if err != nil {
+		zap.S().Debug("error extracting parameter values", zap.String(iacFile, file), zap.Error(err))
+		return
+	}
 }
 
-func extractParameterValues(params map[string]interface{}) (map[string]interface{}, error) {
+func (a *ARMV1) extractParameterValues(params map[string]interface{}) error {
 	data, err := json.Marshal(params["parameters"])
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var npm map[string]struct {
 		Value interface{} `json:"value"`
 	}
 	err = json.Unmarshal(data, &npm)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	finalParams := map[string]interface{}{}
 	for key, value := range npm {
-		finalParams[key] = value.Value
+		a.templateParameters[key] = value.Value
 	}
-	return finalParams, nil
+	return nil
 }

@@ -17,11 +17,14 @@
 package armv1
 
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/accurics/terrascan/pkg/iac-providers/output"
 )
+
+const testDataDir = "testdata"
 
 func TestLoadIacFile(t *testing.T) {
 	table := []struct {
@@ -31,7 +34,14 @@ func TestLoadIacFile(t *testing.T) {
 		typeOnly bool
 		want     output.AllResourceConfigs
 		wantErr  error
-	}{}
+	}{
+		{
+			name:     "key-vault",
+			filePath: filepath.Join(testDataDir, "key-vault", "azuredeploy.json"),
+			armv1:    ARMV1{},
+			wantErr:  nil,
+		},
+	}
 
 	for _, tt := range table {
 		t.Run(tt.name, func(t *testing.T) {

@@ -19,12 +19,32 @@ package armv1
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"syscall"
 	"testing"
 
+	"go.uber.org/zap"
+	"gopkg.in/src-d/go-git.v4"
+	gitConfig "gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+
 	"github.com/accurics/terrascan/pkg/iac-providers/output"
 )
+
+const (
+	repoURL  = "https://github.com/accurics/KaiMonkey.git"
+	branch   = "master"
+	basePath = "test_data"
+	provider = "arm"
+)
+
+func TestMain(m *testing.M) {
+	setup()
+	code := m.Run()
+	shutdown()
+	os.Exit(code)
+}
 
 func TestLoadIacDir(t *testing.T) {
 	table := []struct {
@@ -68,4 +88,73 @@ func TestLoadIacDir(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestARMMapper(t *testing.T) {
+	root := filepath.Join(basePath, provider)
+	dirList := make([]string, 0)
+	err := filepath.Walk(root, func(filePath string, fileInfo os.FileInfo, err error) error {
+		if fileInfo != nil && fileInfo.IsDir() {
+			dirList = append(dirList, filePath)
+		}
+		return err
+	})
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	armv1 := ARMV1{}
+	for i := 1; i < len(dirList); i++ {
+		dir := dirList[i]
+		t.Run(dir, func(t *testing.T) {
+			_, err := armv1.LoadIacDir(dir, false)
+			if err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func setup() {
+	err := downloadArtifacts()
+	if err != nil {
+		zap.S().Fatal(err)
+	}
+}
+
+func shutdown() {
+	os.RemoveAll(basePath)
+}
+
+func downloadArtifacts() error {
+	os.RemoveAll(basePath)
+
+	r, err := git.PlainClone(basePath, false, &git.CloneOptions{
+		URL: repoURL,
+	})
+	if err != nil {
+		return err
+	}
+
+	w, err := r.Worktree()
+	if err != nil {
+		return err
+	}
+
+	err = r.Fetch(&git.FetchOptions{
+		RefSpecs: []gitConfig.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = w.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
+		Force:  true,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

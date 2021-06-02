@@ -23,7 +23,13 @@ type ARMV1 struct {
 
 const (
 	// JSONExtension json
-	JSONExtension = "json"
+	JSONExtension = ".json"
+
+	// ParametersFileExtension .parameters.json
+	ParametersFileExtension = ".parameters.json"
+
+	// MetadataFileExtension .metadata.json
+	MetadataFileExtension = ".metadata.json"
 
 	// UnknownExtension unknown
 	UnknownExtension = "unknown"
